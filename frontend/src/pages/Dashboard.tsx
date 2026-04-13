@@ -207,7 +207,7 @@ export default function Dashboard() {
                       boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
                       padding: "12px 16px",
                     }}
-                    formatter={(value) => [formatRupiah(Number(value)), ""]}
+                    formatter={(value, name) => [formatRupiah(Number(value)), name]}
                     labelStyle={{
                       fontWeight: 600,
                       color: "#112D4E",
@@ -230,6 +230,13 @@ export default function Dashboard() {
                     dataKey="pengeluaran"
                     name="Pengeluaran"
                     fill="#F97316"
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={32}
+                  />
+                  <Bar
+                    dataKey="saldo"
+                    name="Saldo"
+                    fill="#112D4E"
                     radius={[6, 6, 0, 0]}
                     maxBarSize={32}
                   />
