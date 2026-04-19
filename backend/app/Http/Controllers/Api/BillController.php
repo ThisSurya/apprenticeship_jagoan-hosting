@@ -144,7 +144,7 @@ class BillController extends Controller
 
         // Find current active house for the resident
         $activeHistory = HouseResidentHistories::where('resident_id', $request->resident_id)
-            ->whereNull('end_date')
+            ->active()
             ->first();
 
         if (!$activeHistory) {

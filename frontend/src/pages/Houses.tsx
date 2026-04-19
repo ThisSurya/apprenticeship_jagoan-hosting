@@ -9,6 +9,8 @@ import {
   ArrowRight,
   Plus,
   Loader2,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +50,7 @@ import type {
 } from "@/types";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function Houses() {
   const navigate = useNavigate();
@@ -57,10 +60,36 @@ export default function Houses() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isConfirmDelete, setIsConfirmDelete] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newHouse, setNewHouse] = useState({
     house_number: "",
     status: "tidak_dihuni" as HouseStatus,
   });
+
+  const handleConfirmDelete = (id: number) => {
+    setDeleteId(id);
+    setIsConfirmDelete(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.delete(`/houses/${deleteId}`);
+      toast.success("Rumah berhasil dihapus");
+      fetchHouses();
+    } catch (error: any) {
+      console.error("Error deleting house:", error);
+      toast.error(error.response?.data?.message || "Gagal menghapus rumah");
+    } finally {
+      setIsSubmitting(false);
+      setIsConfirmDelete(false);
+      setDeleteId(null);
+    }
+  };
 
   const fetchHouses = async () => {
     setIsLoading(true);
@@ -301,16 +330,29 @@ export default function Houses() {
                       </p>
                     </div>
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className={`rounded-lg text-[10px] uppercase font-bold px-2 py-0.5 ${
-                      house.status === "dihuni"
-                        ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50"
-                        : "bg-orange-50 text-orange-700 hover:bg-orange-50"
-                    }`}
-                  >
-                    {house.status === "dihuni" ? "Dihuni" : "Kosong"}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleConfirmDelete(house.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Badge
+                      variant="secondary"
+                      className={`rounded-lg text-[10px] uppercase font-bold px-2 py-0.5 ${
+                        house.status === "dihuni"
+                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50"
+                          : "bg-orange-50 text-orange-700 hover:bg-orange-50"
+                      }`}
+                    >
+                      {house.status === "dihuni" ? "Dihuni" : "Kosong"}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
@@ -389,14 +431,28 @@ export default function Houses() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="rounded-lg text-[#3F72AF] hover:bg-[#3F72AF]/10 hover:text-[#3F72AF]"
-                        >
-                          Detail
-                          <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConfirmDelete(house.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="rounded-lg text-[#3F72AF] hover:bg-[#3F72AF]/10 hover:text-[#3F72AF]"
+                            onClick={() => navigate(`/rumah/${house.id}`)}
+                          >
+                            Detail
+                            <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -406,6 +462,45 @@ export default function Houses() {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmModal
+        isOpen={isConfirmDelete}
+        onClose={() => !isSubmitting && setIsConfirmDelete(false)}
+        onConfirm={handleDelete}
+        header={
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-red-500" />
+            Hapus Rumah
+          </div>
+        }
+        body="Apakah Anda yakin ingin menghapus data rumah ini? Tindakan ini tidak dapat dibatalkan dan akan menghapus semua riwayat yang terkait."
+        footer={
+          <DialogFooter className="gap-2 sm:gap-0 mt-4 space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmDelete(false)}
+              disabled={isSubmitting}
+              className="rounded-xl border-[#DBE2EF] flex-1 sm:flex-none"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleDelete}
+              disabled={isSubmitting}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-md min-w-[120px] flex-1 sm:flex-none"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Menghapus...
+                </>
+              ) : (
+                "Ya, Hapus"
+              )}
+            </Button>
+          </DialogFooter>
+        }
+      />
     </div>
   );
 }

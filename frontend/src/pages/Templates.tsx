@@ -26,6 +26,7 @@ import { formatRupiah } from "@/lib/format";
 import type { PaymentType, ExpenseTemplate, APIResponse } from "@/types";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function Templates() {
   // States - Tagihan (Payment Types)
@@ -412,48 +413,44 @@ export default function Templates() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={selectedPTForDelete !== null}
-        onOpenChange={(open) => {
-          if (!isDeletingPT && !open) setSelectedPTForDelete(null);
-        }}
-      >
-        <DialogContent
-          className="sm:max-w-md rounded-2xl border-[#DBE2EF]"
-          onPointerDownOutside={(e) => {
-            if (isDeletingPT) e.preventDefault();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="text-[#112D4E] flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-red-500" />
-              Hapus Tagihan Rutin
-            </DialogTitle>
-          </DialogHeader>
-          <DialogDescription>
-            Apakah yakin ingin menghapus tagihan rutin ini?
-          </DialogDescription>
-          <DialogFooter>
+      <ConfirmModal
+        isOpen={selectedPTForDelete !== null}
+        onClose={() => !isDeletingPT && setSelectedPTForDelete(null)}
+        onConfirm={handleDeletePT}
+        header={
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-red-500" />
+            Hapus Tagihan Rutin
+          </div>
+        }
+        body="Apakah yakin ingin menghapus tagihan rutin ini? Tindakan ini tidak dapat dibatalkan."
+        footer={
+          <DialogFooter className="gap-2 sm:gap-0 mt-4 space-x-2">
             <Button
               variant="outline"
               onClick={() => setSelectedPTForDelete(null)}
               disabled={isDeletingPT}
+              className="rounded-xl border-[#DBE2EF] flex-1 sm:flex-none"
             >
               Batal
             </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white rounded-xl min-w-[100px]"
               onClick={handleDeletePT}
               disabled={isDeletingPT}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-md min-w-[120px] flex-1 sm:flex-none"
             >
               {isDeletingPT ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : null}
-              Hapus
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Menghapus...
+                </>
+              ) : (
+                "Ya, Hapus"
+              )}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+      />
 
       {/* ========== MODALS: TAB 2 (ET) ========== */}
       <Dialog
@@ -532,48 +529,44 @@ export default function Templates() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={selectedETForDelete !== null}
-        onOpenChange={(open) => {
-          if (!isDeletingET && !open) setSelectedETForDelete(null);
-        }}
-      >
-        <DialogContent
-          className="sm:max-w-md rounded-2xl border-[#DBE2EF]"
-          onPointerDownOutside={(e) => {
-            if (isDeletingET) e.preventDefault();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="text-[#112D4E] flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-red-500" />
-              Hapus Pengeluaran Rutin
-            </DialogTitle>
-          </DialogHeader>
-          <DialogDescription>
-            Apakah yakin ingin menghapus pengeluaran rutin ini?
-          </DialogDescription>
-          <DialogFooter>
+      <ConfirmModal
+        isOpen={selectedETForDelete !== null}
+        onClose={() => !isDeletingET && setSelectedETForDelete(null)}
+        onConfirm={handleDeleteET}
+        header={
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-red-500" />
+            Hapus Pengeluaran Rutin
+          </div>
+        }
+        body="Apakah yakin ingin menghapus pengeluaran rutin ini? Tindakan ini tidak dapat dibatalkan."
+        footer={
+          <DialogFooter className="gap-2 sm:gap-0 mt-4 space-x-2">
             <Button
               variant="outline"
               onClick={() => setSelectedETForDelete(null)}
               disabled={isDeletingET}
+              className="rounded-xl border-[#DBE2EF] flex-1 sm:flex-none"
             >
               Batal
             </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white rounded-xl min-w-[100px]"
               onClick={handleDeleteET}
               disabled={isDeletingET}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-md min-w-[120px] flex-1 sm:flex-none"
             >
               {isDeletingET ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : null}
-              Hapus
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Menghapus...
+                </>
+              ) : (
+                "Ya, Hapus"
+              )}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+      />
     </div>
   );
 }

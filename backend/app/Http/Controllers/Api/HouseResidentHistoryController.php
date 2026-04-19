@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HouseResidentHistories;
 use App\Models\Houses;
 use App\Traits\ApiResponse;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -19,9 +20,11 @@ class HouseResidentHistoryController extends Controller
      */
     public function index(Request $request)
     {
-        $houses = Houses::with(['histories' => function ($q) {
-            $q->whereNull('end_date')->with('resident');
-        }])->get();
+        $houses = Houses::with([
+            'histories' => function ($q) {
+                $q->active()->with('resident');
+            }
+        ])->get();
 
         $data = $houses->map(function ($house) {
             $activeHistory = $house->histories->first();
@@ -48,7 +51,7 @@ class HouseResidentHistoryController extends Controller
         // Filter lampau (past residents)
         if ($request->has('is_past')) {
             if ($request->is_past !== 'true') {
-                $query->whereNull('end_date');
+                $query->active();
             }
         }
 
@@ -57,7 +60,7 @@ class HouseResidentHistoryController extends Controller
             $search = $request->search;
             $query->whereHas('resident', function ($q) use ($search) {
                 $q->where('full_name', 'like', "%{$search}%")
-                  ->orWhere('status', 'like', "%{$search}%");
+                    ->orWhere('status', 'like', "%{$search}%");
             });
         }
 
@@ -77,8 +80,7 @@ class HouseResidentHistoryController extends Controller
         $validator = Validator::make($request->all(), [
             'house_id' => 'required|exists:houses,id',
             'resident_id' => 'required|exists:residents,id',
-            'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'duration' => 'sometimes|integer|min:1|max:12',
         ]);
 
         if ($validator->fails()) {
@@ -90,7 +92,18 @@ class HouseResidentHistoryController extends Controller
             return $this->error_response('Resident is already active in another house', 422);
         }
 
-        $history = HouseResidentHistories::create($request->all());
+        $startDate = Carbon::today();
+        $endDate = null;
+        if ($request->duration) {
+            $endDate = $startDate->copy()->addMonths($request->duration)->toDateString();
+        }
+
+        $history = HouseResidentHistories::create([
+            'house_id' => $request->house_id,
+            'resident_id' => $request->resident_id,
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate,
+        ]);
 
         // Update house status to 'dihuni'
         Houses::where('id', $request->house_id)->update(['status' => 'dihuni']);
@@ -104,7 +117,7 @@ class HouseResidentHistoryController extends Controller
     private function isResidentActive($residentId)
     {
         return HouseResidentHistories::where('resident_id', $residentId)
-            ->whereNull('end_date')
+            ->active()
             ->exists();
     }
 
@@ -123,6 +136,10 @@ class HouseResidentHistoryController extends Controller
             'end_date' => 'nullable|date',
         ]);
 
+        if ($history->start_date < $request->start_date) {
+            return $this->error_response('This resident has not start living!', 422);
+        }
+
         // Set end_date to mark as past resident (default to today if not provided)
         $endDate = $request->end_date ?? now()->toDateString();
 
@@ -139,7 +156,7 @@ class HouseResidentHistoryController extends Controller
 
         // Check if there are other active residents in the same house
         $activeResidentsCount = HouseResidentHistories::where('house_id', $houseId)
-            ->whereNull('end_date')
+            ->active()
             ->count();
 
         if ($activeResidentsCount === 0) {
@@ -158,7 +175,7 @@ class HouseResidentHistoryController extends Controller
         $validator = Validator::make($request->all(), [
             'house_id' => 'required|exists:houses,id',
             'resident_id' => 'required|exists:residents,id',
-            'start_date' => 'required|date',
+            'duration' => 'sometimes|integer|min:1|max:12',
         ]);
 
         if ($validator->fails()) {
@@ -167,7 +184,7 @@ class HouseResidentHistoryController extends Controller
 
         // Get current active resident for this house
         $activeHistory = HouseResidentHistories::where('house_id', $request->house_id)
-            ->whereNull('end_date')
+            ->active()
             ->first();
 
         // Validation: Cannot change to the same resident currently active
@@ -180,8 +197,14 @@ class HouseResidentHistoryController extends Controller
             return $this->error_response('Resident is already active in another house', 422);
         }
 
+        $startDate = Carbon::today();
+        $endDate = null;
+        if ($request->duration) {
+            $endDate = $startDate->copy()->addMonths($request->duration)->toDateString();
+        }
+
         try {
-            return DB::transaction(function () use ($request, $activeHistory) {
+            return DB::transaction(function () use ($request, $activeHistory, $startDate, $endDate) {
                 // 1. End current active resident stay
                 if ($activeHistory) {
                     $activeHistory->update([
@@ -193,8 +216,8 @@ class HouseResidentHistoryController extends Controller
                 $newHistory = HouseResidentHistories::create([
                     'house_id' => $request->house_id,
                     'resident_id' => $request->resident_id,
-                    'start_date' => $request->start_date,
-                    'end_date' => null
+                    'start_date' => $startDate->toDateString(),
+                    'end_date' => $endDate
                 ]);
 
                 // 3. Ensure house status is 'dihuni'

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,9 +12,9 @@ return new class extends Migration
     {
         Schema::create('bills', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('resident_id')->constrained('residents')->onDelete('cascade');
-            $table->foreignId('house_id')->constrained('houses')->onDelete('cascade');
-            $table->foreignId('payment_type_id')->constrained('payment_types')->onDelete('cascade');
+            $table->foreignId('resident_id')->constrained('residents')->onDelete('restrict');
+            $table->foreignId('house_id')->constrained('houses')->onDelete('restrict');
+            $table->foreignId('payment_type_id')->constrained('payment_types')->onDelete('restrict');
             $table->date('period_start');
             $table->date('period_end');
             $table->decimal('amount', 15, 2);

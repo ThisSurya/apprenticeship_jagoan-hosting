@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Wallet, RefreshCw, Pencil, Trash2, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Wallet,
+  RefreshCw,
+  Pencil,
+  Trash2,
+  Loader2,
+  AlertTriangle,
+} from "lucide-react";
+import ConfirmModal from "@/components/ConfirmModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +45,8 @@ export default function Expenses() {
 
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -156,12 +167,17 @@ export default function Expenses() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Apakah data pengeluaran ini ingin dihapus?")) return;
+  const handleDelete = (id: number) => {
+    setDeleteId(id);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!deleteId) return;
 
     setIsSubmitting(true);
     try {
-      await api.delete(`/expenses/${id}`);
+      await api.delete(`/expenses/${deleteId}`);
       toast.success("Data pengeluaran berhasil dihapus");
       fetchExpenses();
     } catch (error) {
@@ -169,6 +185,7 @@ export default function Expenses() {
       toast.error("Gagal menghapus data");
     } finally {
       setIsSubmitting(false);
+      setDeleteId(null);
     }
   };
 
@@ -462,7 +479,7 @@ export default function Expenses() {
             )}
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-0 space-x-2">
             <Button
               variant="outline"
               disabled={isSubmitting}
@@ -509,7 +526,7 @@ export default function Expenses() {
               rutin secara otomatis berdasarkan template yang aktif?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+          <DialogFooter className="gap-2 sm:gap-0 mt-4 space-x-2">
             <Button
               variant="outline"
               disabled={isGenerating}
@@ -535,6 +552,45 @@ export default function Expenses() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmModal
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => !isSubmitting && setIsDeleteConfirmOpen(false)}
+        onConfirm={executeDelete}
+        header={
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-red-500" />
+            Hapus Pengeluaran
+          </div>
+        }
+        body="Apakah Anda yakin ingin menghapus data pengeluaran ini? Tindakan ini tidak dapat dibatalkan."
+        footer={
+          <DialogFooter className="gap-2 sm:gap-0 mt-4 space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              disabled={isSubmitting}
+              className="rounded-xl border-[#DBE2EF] flex-1 sm:flex-none"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={executeDelete}
+              disabled={isSubmitting}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-md min-w-[120px] flex-1 sm:flex-none"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Menghapus...
+                </>
+              ) : (
+                "Ya, Hapus"
+              )}
+            </Button>
+          </DialogFooter>
+        }
+      />
     </div>
   );
 }

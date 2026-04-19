@@ -13,7 +13,9 @@ import {
   UserPlus,
   Trash2,
   Edit2,
+  AlertTriangle,
 } from "lucide-react";
+import ConfirmModal from "@/components/ConfirmModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +64,7 @@ export default function HouseDetail() {
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   // Forms state
   const [removeDate, setRemoveDate] = useState(
@@ -72,7 +75,7 @@ export default function HouseDetail() {
   });
   const [assignForm, setAssignForm] = useState({
     resident_id: "",
-    start_date: new Date().toISOString().split("T")[0],
+    duration: "",
   });
 
   const fetchData = async () => {
@@ -125,8 +128,10 @@ export default function HouseDetail() {
     }
   }, [id]);
 
-  const currentHistory = histories.find((h) => h.end_date === null);
   const today = new Date().toISOString().split("T")[0];
+  const currentHistory = histories.find(
+    (h) => h.end_date === null || h.end_date > today,
+  );
 
   const handleEditHouse = async () => {
     if (!editForm.house_number.trim()) {
@@ -181,17 +186,38 @@ export default function HouseDetail() {
   };
 
   const handleAssignResident = async () => {
-    if (!assignForm.resident_id || !assignForm.start_date) {
+    if (!assignForm.resident_id) {
       toast.error("Harap isi semua data");
       return;
     }
 
+    if (
+      filteredResidents.find((r) => r.id === Number(assignForm.resident_id))
+        .status == "kontrak" &&
+      !assignForm.duration
+    ) {
+      toast.error("Harap isi durasi kontrak");
+      return;
+    }
+
+    if (
+      currentHistory &&
+      (currentHistory.end_date > today || !currentHistory.end_date)
+    ) {
+      setIsConfirmModalOpen(true);
+      return;
+    }
+
+    executeAssign();
+  };
+
+  const executeAssign = async () => {
     setIsSubmitting(true);
     try {
       const payload = {
         house_id: Number(id),
         resident_id: Number(assignForm.resident_id),
-        start_date: assignForm.start_date,
+        duration: Number(assignForm.duration) || undefined,
       };
 
       let response;
@@ -210,7 +236,7 @@ export default function HouseDetail() {
             : "Penghuni berhasil ditetapkan",
         );
         setIsAssignModalOpen(false);
-        setAssignForm({ resident_id: "", start_date: today });
+        setAssignForm({ resident_id: "", duration: "" });
         fetchData();
       }
     } catch (error: any) {
@@ -383,18 +409,19 @@ export default function HouseDetail() {
                 {histories.map((entry) => (
                   <div key={entry.id} className="relative last:pb-0">
                     <div
-                      className={`absolute left-[-17px] top-1.5 h-3.5 w-3.5 rounded-full border-2 ${!entry.end_date ? "bg-emerald-500 border-emerald-200 shadow-[0_0_0_4px_rgba(16,185,129,0.1)]" : "bg-white border-[#DBE2EF]"}`}
+                      className={`absolute left-[-17px] top-1.5 h-3.5 w-3.5 rounded-full border-2 ${!entry.end_date || entry.end_date > new Date().toISOString() ? "bg-emerald-500 border-emerald-200 shadow-[0_0_0_4px_rgba(16,185,129,0.1)]" : "bg-white border-[#DBE2EF]"}`}
                     />
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold text-[#112D4E]">
                           {entry.resident.full_name}
                         </p>
-                        {!entry.end_date && (
-                          <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 rounded-lg text-[10px] font-bold px-1.5">
-                            AKTIF
-                          </Badge>
-                        )}
+                        {!entry.end_date ||
+                          (entry.end_date > new Date().toISOString() && (
+                            <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 rounded-lg text-[10px] font-bold px-1.5">
+                              AKTIF
+                            </Badge>
+                          ))}
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
@@ -616,22 +643,42 @@ export default function HouseDetail() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="start_date">Tanggal Mulai Huni</Label>
-              <Input
-                id="start_date"
-                type="date"
-                min={today}
-                value={assignForm.start_date}
-                onChange={(e) =>
-                  setAssignForm({ ...assignForm, start_date: e.target.value })
-                }
-                className="rounded-xl border-[#DBE2EF]"
-              />
-              <p className="text-[10px] text-muted-foreground mt-1 italic">
-                * Minimal tanggal hari ini
-              </p>
+
+              {filteredResidents.find(
+                (r) => r.id === Number(assignForm.resident_id),
+              )?.status == "kontrak" && (
+                <div className="space-y-2">
+                  <Label htmlFor="durasi">Durasi Hunian</Label>
+
+                  <Select
+                    onValueChange={(v) =>
+                      setAssignForm({ ...assignForm, duration: v })
+                    }
+                  >
+                    <SelectTrigger className="rounded-xl border-[#DBE2EF]">
+                      <SelectValue placeholder="Pilih durasi..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="1">1 Bulan</SelectItem>
+                      <SelectItem value="2">2 Bulan</SelectItem>
+                      <SelectItem value="3">3 Bulan</SelectItem>
+                      <SelectItem value="4">4 Bulan</SelectItem>
+                      <SelectItem value="5">5 Bulan</SelectItem>
+                      <SelectItem value="6">6 Bulan</SelectItem>
+                      <SelectItem value="7">7 Bulan</SelectItem>
+                      <SelectItem value="8">8 Bulan</SelectItem>
+                      <SelectItem value="9">9 Bulan</SelectItem>
+                      <SelectItem value="10">10 Bulan</SelectItem>
+                      <SelectItem value="11">11 Bulan</SelectItem>
+                      <SelectItem value="12">12 Bulan</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <p className="text-[10px] text-muted-foreground mt-1 italic">
+                    * Minimal 1 bulan
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -656,6 +703,19 @@ export default function HouseDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={executeAssign}
+        header={
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            Konfirmasi Perubahan
+          </div>
+        }
+        body="Penghuni saat ini masih memiliki masa huni yang aktif. Apakah Anda yakin ingin mengakhiri masa huni mereka dan menggantinya dengan penghuni baru?"
+      />
     </div>
   );
 }

@@ -9,6 +9,8 @@ import {
   Loader2,
   Upload,
   ImageIcon,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,12 +45,15 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { useResident } from "@/context/ResidentContext";
 import type { Resident, ResidentStatus, APIResponse } from "@/types";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function Residents() {
   const { residents, isLoading, fetchResidents } = useResident();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isConfirmDelete, setIsConfirmDelete] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editingResidentId, setEditingResidentId] = useState<number | null>(
     null,
   );
@@ -122,6 +127,29 @@ export default function Residents() {
       setIsDialogOpen(false);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmDelete = (id: number) => {
+    setDeleteId(id);
+    setIsConfirmDelete(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.delete(`/residents/${deleteId}`);
+      toast.success("Data warga berhasil dihapus");
+      fetchResidents(true);
+    } catch (error) {
+      console.error("Error deleting resident:", error);
+      toast.error(error.response?.data?.message || "Gagal menghapus data");
+    } finally {
+      setIsSubmitting(false);
+      setIsConfirmDelete(false);
+      setDeleteId(null);
     }
   };
 
@@ -474,6 +502,15 @@ export default function Residents() {
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleConfirmDelete(resident.id)}
+                          className="rounded-lg text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -483,6 +520,44 @@ export default function Residents() {
           )}
         </CardContent>
       </Card>
+      <ConfirmModal
+        isOpen={isConfirmDelete}
+        onClose={() => !isSubmitting && setIsConfirmDelete(false)}
+        onConfirm={handleDelete}
+        header={
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-red-500" />
+            Hapus Warga
+          </div>
+        }
+        body="Apakah Anda yakin ingin menghapus data warga ini? Tindakan ini tidak dapat dibatalkan dan akan menghapus riwayat yang terkait."
+        footer={
+          <DialogFooter className="gap-2 sm:gap-0 mt-4 space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmDelete(false)}
+              disabled={isSubmitting}
+              className="rounded-xl border-[#DBE2EF] flex-1 sm:flex-none"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleDelete}
+              disabled={isSubmitting}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-md min-w-[120px] flex-1 sm:flex-none"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Menghapus...
+                </>
+              ) : (
+                "Ya, Hapus"
+              )}
+            </Button>
+          </DialogFooter>
+        }
+      />
     </div>
   );
 }

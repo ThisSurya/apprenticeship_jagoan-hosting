@@ -21,11 +21,23 @@ class HouseResidentHistories extends Model
 
     public function house()
     {
-        return $this->belongsTo(houses::class, 'house_id');
+        return $this->belongsTo(Houses::class, 'house_id');
     }
 
     public function resident()
     {
-        return $this->belongsTo(residents::class, 'resident_id');
+        return $this->belongsTo(Residents::class, 'resident_id');
+    }
+
+    /**
+     * Scope a query to only include active residents.
+     * Active is defined as end_date is null or end_date > now().
+     */
+    public function scopeActive($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('end_date')
+              ->orWhere('end_date', '>', now()->toDateString());
+        });
     }
 }
