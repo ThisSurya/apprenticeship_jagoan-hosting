@@ -62,6 +62,8 @@ export default function Billing() {
 
   const [isLoadingBills, setIsLoadingBills] = useState(true);
   const [isLoadingPayments, setIsLoadingPayments] = useState(true);
+  const [isConfirmOverPaymentOpen, setIsConfirmOverPaymentOpen] =
+    useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Bill Generation Modals
@@ -209,16 +211,29 @@ export default function Billing() {
 
   // ========== SINGLE PAYMENT ==========
   const openSinglePayment = (bill: Bill) => {
+    console.log(bill);
     setSelectedSingleBill(bill);
     setSinglePaymentAmount(String(bill.amount_due - bill.total_paid));
     setIsSinglePaymentOpen(true);
   };
 
-  const handleSinglePaymentSubmit = async () => {
+  const handleConfirmOverPayment = async () => {
     if (!selectedSingleBill) return;
     const amount = Number(singlePaymentAmount);
     if (amount <= 0) return toast.error("Nominal tidak valid");
+    if (
+      amount >
+      selectedSingleBill.amount_due - selectedSingleBill.total_paid
+    ) {
+      setIsConfirmOverPaymentOpen(true);
+      return;
+    }
 
+    SubmitSinglePayment();
+  };
+
+  const SubmitSinglePayment = async () => {
+    const amount = Number(singlePaymentAmount);
     setIsSubmitting(true);
     try {
       const payload = {
@@ -806,7 +821,7 @@ export default function Billing() {
               Batal
             </Button>
             <Button
-              onClick={handleSinglePaymentSubmit}
+              onClick={handleConfirmOverPayment}
               disabled={isSubmitting}
               className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
             >
@@ -1028,6 +1043,45 @@ export default function Billing() {
                 </>
               ) : (
                 "Ya, Hapus"
+              )}
+            </Button>
+          </DialogFooter>
+        }
+      />
+
+      <ConfirmModal
+        isOpen={isConfirmOverPaymentOpen}
+        onClose={() => !isSubmitting && setIsConfirmOverPaymentOpen(false)}
+        onConfirm={SubmitSinglePayment}
+        header={
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            Konfirmasi Pembayaran
+          </div>
+        }
+        body={`Saat ini membayar tagihan dengan nilai nominal ${formatRupiah(Number(singlePaymentAmount))} sedangkan tagihan yang harus dibayar adalah ${formatRupiah(selectedSingleBill?.amount_due - selectedSingleBill?.total_paid)} apakah tetap membayar dengan nominal tersebut?`}
+        footer={
+          <DialogFooter className="gap-2 sm:gap-0 mt-4 space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmOverPaymentOpen(false)}
+              disabled={isSubmitting}
+              className="rounded-xl border-[#DBE2EF] flex-1 sm:flex-none"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={SubmitSinglePayment}
+              disabled={isSubmitting}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl shadow-md min-w-[120px] flex-1 sm:flex-none"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Menunggu...
+                </>
+              ) : (
+                "Ya, Bayar"
               )}
             </Button>
           </DialogFooter>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\HouseResidentHistories;
 use App\Models\Houses;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
@@ -80,6 +81,12 @@ class HouseController extends Controller
 
         if (!$house) {
             return $this->error_response('House not found', Response::HTTP_NOT_FOUND);
+        }
+
+        $is_active = HouseResidentHistories::where('house_id', $id)->first();
+
+        if ($is_active) {
+            return $this->error_response('House was occupied', Response::HTTP_BAD_REQUEST);
         }
 
         $house->delete();

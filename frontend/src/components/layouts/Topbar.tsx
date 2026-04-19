@@ -35,7 +35,7 @@ export function Topbar() {
   };
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#DBE2EF]/60 bg-white/80 backdrop-blur-sm px-6">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#DBE2EF]/60 bg-white/80 backdrop-blur-sm px-6 sticky top-0 z-9999">
       <div className="flex items-center gap-3">
         {/* <SidebarTrigger className="text-[#112D4E]/60 hover:text-[#112D4E] hover:bg-[#DBE2EF]/40 rounded-lg" /> */}
         <Separator orientation="vertical" className="h-6" />

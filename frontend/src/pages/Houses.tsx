@@ -334,6 +334,7 @@ export default function Houses() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      disabled={house.status === "dihuni"}
                       className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
